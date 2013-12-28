@@ -1,4 +1,27 @@
-# Ubuntu下安装方法
+
+Please mine at http://mmc.gpool.net
+
+If you like the pool, please donate MMC to address M9PrLnpQamdxBY1E6NCQ1SmkHXyXu1iyQm
+
+# How to install on Ubuntu
+
+sudo apt-get install libqt4-dev
+
+sudo apt-get install libssl-dev
+
+make
+
+For other version of Linux, please try to install similar packages ( libqt4-devel, libssl-devel ).
+
+If there is still something wrong with "make", try "qmake" first, then try "make"
+
+# Usage
+
+mmcminer -h IP -p PORT -u ADDRESS -t THREAD
+
+The miner will use approximately 1GB memory.
+
+# Ubuntu下安装方法 
 
 sudo apt-get install libqt4-dev
 
