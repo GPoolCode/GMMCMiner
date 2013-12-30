@@ -11,7 +11,7 @@
 	#define AES_ITERATIONS 50
 
 	// useful constants
-    #define  psuedoRandomDataSize (1<<PSUEDORANDOM_DATA_SIZE)
+#define  psuedoRandomDataSize (1<<PSUEDORANDOM_DATA_SIZE)
 #define  cacheMemorySize   (1<<L2CACHE_TARGET)
 #define chunks (1<<(PSUEDORANDOM_DATA_SIZE-PSUEDORANDOM_DATA_CHUNK_SIZE))
 #define chunkSize (1<<(PSUEDORANDOM_DATA_CHUNK_SIZE))
@@ -21,11 +21,12 @@
         unsigned char hash_tmp[sizeof(midHash)];
 		memcpy((char*)&hash_tmp[0], (char*)&midHash, sizeof(midHash) );
 		uint32_t* index = (uint32_t*)hash_tmp;
-		uint32_t chunksToProcess = chunks / totalThreads;
+
+		uint32_t chunksToProcess = (memorySize >> PSUEDORANDOM_DATA_CHUNK_SIZE) / totalThreads;
 		uint32_t startChunk = threadNumber * chunksToProcess;
         uint32_t endChunk = startChunk + chunksToProcess;
         if (threadNumber == totalThreads - 1) {
-            endChunk = chunks;
+            endChunk = (memorySize >> PSUEDORANDOM_DATA_CHUNK_SIZE);
         }
 		for( uint32_t i = startChunk; i < endChunk; i++) {
 			*index = i;
@@ -33,7 +34,11 @@
 		}
 	}
 	
-	void aesSearch(char *mainMemoryPsuedoRandomData, int threadNumber, int totalThreads, WorkThread *parentThread, bool *quitFlag) {
+	void aesSearch(char *mainMemoryPsuedoRandomData, int threadNumber, int totalThreads, uint256 midHash, WorkThread *parentThread, bool *quitFlag) {
+        unsigned char hash_tmp[sizeof(midHash)];
+		memcpy((char*)&hash_tmp[0], (char*)&midHash, sizeof(midHash) );
+		uint32_t* index = (uint32_t*)hash_tmp;
+
 		unsigned char cacheMemoryOperatingData[cacheMemorySize+16];
 		unsigned char cacheMemoryOperatingData2[cacheMemorySize];
 		uint32_t* cacheMemoryOperatingData32 = (uint32_t*)cacheMemoryOperatingData;
@@ -49,10 +54,30 @@
         }
 		for(uint32_t k=startLoc;k<endLoc;k++){
             if (*quitFlag) return;
-			memcpy((char*)&cacheMemoryOperatingData[0], (char*)&mainMemoryPsuedoRandomData[k*cacheMemorySize], cacheMemorySize);
+	    		if ((k + 1) * cacheMemorySize <= memorySize) {
+				memcpy((char*)&cacheMemoryOperatingData[0], (char*)&mainMemoryPsuedoRandomData[k*cacheMemorySize], cacheMemorySize);
+			}
+			else {
+				int i = k*cacheMemorySize / chunkSize;
+				for (int j = 0; j < cacheMemorySize / chunkSize; j++) {
+					*index = i;
+					SHA512((unsigned char*)hash_tmp, sizeof(hash_tmp), (unsigned char*)&(cacheMemoryOperatingData[j*chunkSize]));
+					i++;
+				}
+			}
 			for(int j=0;j<AES_ITERATIONS;j++){
 				uint32_t nextLocation = cacheMemoryOperatingData32[(cacheMemorySize/4)-1]%comparisonSize;
-				memcpy((char*)&cacheMemoryOperatingData2[0], (char*)&mainMemoryPsuedoRandomData[nextLocation*cacheMemorySize], cacheMemorySize);
+				if ((nextLocation + 1) * cacheMemorySize <= memorySize) {
+					memcpy((char*)&cacheMemoryOperatingData2[0], (char*)&mainMemoryPsuedoRandomData[nextLocation*cacheMemorySize], cacheMemorySize);
+				}
+				else {
+					int i = nextLocation*cacheMemorySize / chunkSize;
+					for (int j = 0; j < cacheMemorySize / chunkSize; j++) {
+						*index = i;
+						SHA512((unsigned char*)hash_tmp, sizeof(hash_tmp), (unsigned char*)&(cacheMemoryOperatingData2[j*chunkSize]));
+						i++;
+					}
+				}
 				for(uint32_t i = 0; i < cacheMemorySize/4; i++){
 					cacheMemoryOperatingData322[i] = cacheMemoryOperatingData32[i] ^ cacheMemoryOperatingData322[i];
 				}
