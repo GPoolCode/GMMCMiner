@@ -18,6 +18,7 @@ using std::string;
 uint32_t rej_num = 0;
 uint32_t sub_num = 0;
 QTime tGlobal;
+unsigned int memorySize = (1<<30);
 
 double getDifficulty(unsigned int nBits) {
     int nShift = (nBits >> 24) & 0xff;
@@ -54,7 +55,7 @@ void MiningThreadStep1::run() {
 }
 
 void MiningThreadStep2::run() {
-    aesSearch(mainMemory, threadNumber, totalThreads, parentThread, quitFlag);
+    aesSearch(mainMemory, threadNumber, totalThreads, midHash, parentThread, quitFlag);
 }
 
 
@@ -71,7 +72,8 @@ void WorkThread::run() {
     while (!quitFlag) {
         nNonce++;
         getMidHash();
-    
+   
+        //qDebug("Step1");	
         for (int i = 0; i < workerCount; i++) {
             workerStep1[i].mainMemory = mainMemory;
             workerStep1[i].threadNumber = i;
@@ -82,10 +84,12 @@ void WorkThread::run() {
         for (int i = 0; i < workerCount; i++) {
             workerStep1[i].wait();
         }
+        //qDebug("Step2");	
         for (int i = 0; i < workerCount; i++) {
             workerStep2[i].mainMemory = mainMemory;
             workerStep2[i].threadNumber = i;
             workerStep2[i].totalThreads = workerCount;
+	    workerStep2[i].midHash = midHash;
             workerStep2[i].parentThread = this;
             workerStep2[i].quitFlag = &quitFlag;
             workerStep2[i].start();
@@ -93,6 +97,7 @@ void WorkThread::run() {
         for (int i = 0; i < workerCount; i++) {
             workerStep2[i].wait();
         }
+        //qDebug("Over");	
 
         nTime = originTime + t.elapsed() / 1000;
     }
@@ -251,8 +256,11 @@ void GPoolClient::onRead() {
             sub_num++;
             qDebug("[%.3f Share / Min][Acc %u Rej %u Sub %u AccRate %.3f%%]", (sub_num - rej_num) / (tGlobal.elapsed() / 60000.), sub_num - rej_num, rej_num, sub_num, (sub_num - rej_num) * 100. / sub_num);
         }
+	else if (opCode == 8) {
+	    
+	}
         else {
-            qDebug("Unkown OpCode %d, Ignore Data Length %d", opCode, opLen);
+            //qDebug("Unkown OpCode %d, Ignore Data Length %d", opCode, opLen);
         }
         
         data += 4 + opLen;
@@ -267,18 +275,12 @@ int main(int argc, char**argv) {
     qDebug("This is beta version of GMMCMiner.");
     qDebug("Release date : %s", __DATE__);
 
-    char *mainMemory = new char[1<<30];
-    if (mainMemory == NULL) {
-        qDebug("I cannot allocate 1GB memory. Exit.");
-        return 0;
-    }
 
     QString ip = "162.243.223.123";
     int port = 10031;
 
     GPoolClient *client = new GPoolClient();
     client->workThread.nNonce = 0;
-    client->workThread.mainMemory = mainMemory;
     client->workThread.workerCount = 1;
     client->user = "M9PrLnpQamdxBY1E6NCQ1SmkHXyXu1iyQm";
 
@@ -295,6 +297,14 @@ int main(int argc, char**argv) {
         else if (strcmp(argv[i], "-p") == 0) {
             sscanf(argv[++i], "%d", &port);
         }
+	else if (strcmp(argv[i], "-m") == 0) {
+		if (strcmp(argv[i + 1], "512") == 0) {
+			memorySize = (1<<29);
+		}
+		else if (strcmp(argv[i + 1], "256") == 0) {
+			memorySize = (1<<28);
+		}
+	}
     }
 
     if (client->workThread.workerCount > MAX_THREADS) {
@@ -307,6 +317,14 @@ int main(int argc, char**argv) {
     qDebug("@Port : %d", port);
     qDebug("@User : %s", client->user.c_str());
     qDebug("@Thread : %d", client->workThread.workerCount);
+    qDebug("@Memory : %d MB", memorySize >> 20);
+
+    char *mainMemory = new char[memorySize];
+    if (mainMemory == NULL) {
+        qDebug("I cannot allocate enough memory. Exit.");
+        return 0;
+    }
+    client->workThread.mainMemory = mainMemory;
 
     tGlobal.start();
     
@@ -338,4 +356,3 @@ int main(int argc, char**argv) {
 
     return 0;
 }
-
