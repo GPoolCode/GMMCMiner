@@ -26,6 +26,7 @@ public:
     int threadNumber;
     int totalThreads;
     char *mainMemory;
+    uint256 midHash;
     bool *quitFlag;
     WorkThread *parentThread;
     void run();
