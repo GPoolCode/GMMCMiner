@@ -99,7 +99,8 @@ first: all
 
 ####### Build rules
 
-all: Makefile $(TARGET)
+all: $(TARGET)
+#all: Makefile $(TARGET)
 
 $(TARGET):  $(OBJECTS)  
 	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
@@ -131,7 +132,7 @@ Makefile: gmmcminer.pro  /usr/share/qt4/mkspecs/linux-g++-64/qmake.conf /usr/sha
 		/usr/lib/x86_64-linux-gnu/libQtGui.prl \
 		/usr/lib/x86_64-linux-gnu/libQtNetwork.prl \
 		/usr/lib/x86_64-linux-gnu/libQtCore.prl
-	$(QMAKE) -o Makefile gmmcminer.pro
+#	$(QMAKE) -o Makefile gmmcminer.pro
 /usr/share/qt4/mkspecs/common/unix.conf:
 /usr/share/qt4/mkspecs/common/linux.conf:
 /usr/share/qt4/mkspecs/common/gcc-base.conf:
@@ -159,8 +160,8 @@ Makefile: gmmcminer.pro  /usr/share/qt4/mkspecs/linux-g++-64/qmake.conf /usr/sha
 /usr/lib/x86_64-linux-gnu/libQtGui.prl:
 /usr/lib/x86_64-linux-gnu/libQtNetwork.prl:
 /usr/lib/x86_64-linux-gnu/libQtCore.prl:
-qmake:  FORCE
-	@$(QMAKE) -o Makefile gmmcminer.pro
+#qmake:  FORCE
+#	@$(QMAKE) -o Makefile gmmcminer.pro
 
 dist: 
 	@$(CHK_DIR_EXISTS) .tmp/gmmcminer1.0.0 || $(MKDIR) .tmp/gmmcminer1.0.0 
@@ -176,7 +177,7 @@ clean:compiler_clean
 
 distclean: clean
 	-$(DEL_FILE) $(TARGET) 
-	-$(DEL_FILE) Makefile
+#	-$(DEL_FILE) Makefile
 
 
 check: first
